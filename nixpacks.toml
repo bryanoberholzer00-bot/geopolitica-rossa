@@ -1,8 +1,5 @@
 [phases.install]
-cmds = ["npm install"]
-
-[phases.build]
-cmds = []
+cmds = ["npm install --ignore-scripts"]
 
 [start]
 cmd = "node server.js"
