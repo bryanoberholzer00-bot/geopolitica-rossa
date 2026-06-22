@@ -50,6 +50,24 @@ const ReaderModal = ({ article, onClose }) => {
       // Hide if broken
       img.onerror = () => { img.style.display = 'none'; };
     });
+
+    // Deduplicate images by filename stem — keeps first occurrence, removes duplicates.
+    // Handles same image served from different CDN domains or with different size suffixes.
+    const seenStems = new Set();
+    bodyRef.current.querySelectorAll('img').forEach(img => {
+      if (img.style.display === 'none') return;
+      const src = img.getAttribute('src') || '';
+      const stem = src
+        .replace(/[-_](scaled|\d+x\d+)(\.[^.?#]+)?(\?.*)?$/, '') // strip size suffix
+        .split('/').pop()
+        .replace(/\.[^.]+$/, ''); // strip extension
+      if (!stem) return;
+      if (seenStems.has(stem)) {
+        img.remove();
+      } else {
+        seenStems.add(stem);
+      }
+    });
   }, [content, loading]);
 
   useEffect(() => {
