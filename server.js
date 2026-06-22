@@ -107,8 +107,8 @@ app.get('/api/read', async (req, res) => {
   }
 });
 
-// Catch-all: serve React app for any unknown route
-app.get('*', (req, res) => {
+// Catch-all: serve React app for any unknown route (Express 5 syntax)
+app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
