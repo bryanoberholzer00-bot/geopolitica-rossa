@@ -9,6 +9,7 @@ const ReaderModal = ({ article, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [showHeroImage, setShowHeroImage] = useState(false); // only for Readability content
   const bodyRef = React.useRef(null);
 
   // After content renders, fix all images inside the modal
@@ -129,6 +130,7 @@ const ReaderModal = ({ article, onClose }) => {
           a.setAttribute('target', '_blank');
           a.setAttribute('rel', 'noopener noreferrer');
         });
+        setShowHeroImage(true); // show hero image for Readability content
         setContent(tmp.innerHTML);
       } catch (err) {
         // 3. Last resort: show snippet + link to original
@@ -176,7 +178,7 @@ const ReaderModal = ({ article, onClose }) => {
             </div>
           ) : (
             <div className="article-html">
-              {article.image && (
+              {article.image && showHeroImage && (
                 <img 
                   src={article.image} 
                   alt={article.title} 
