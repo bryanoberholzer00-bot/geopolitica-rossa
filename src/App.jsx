@@ -58,19 +58,37 @@ const ReaderModal = ({ article, onClose }) => {
       setUsedFallback(false);
 
       if (article.link.includes('youtu')) {
-        // Render YouTube embedded iframe using robust regex
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*).*/;
         const videoIdMatch = article.link.match(regExp);
         const videoId = (videoIdMatch && videoIdMatch[2].length === 11) ? videoIdMatch[2] : null;
-        
+
         if (videoId) {
-          setContent(`<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`);
+          const thumb = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+          setContent(`
+            <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener noreferrer"
+              style="display:block;position:relative;border-radius:12px;overflow:hidden;text-decoration:none;">
+              <img src="${thumb}" alt="Thumbnail" 
+                style="width:100%;height:auto;display:block;border-radius:12px;" 
+                onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" />
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
+                <div style="width:72px;height:72px;background:red;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                  <svg viewBox="0 0 24 24" fill="white" width="36" height="36"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </a>
+            <p style="margin-top:1.2rem;font-size:1rem;color:var(--text-secondary);">
+              Clicca sulla thumbnail per guardare il video su 
+              <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener noreferrer" 
+                style="color:#ff4444;font-weight:600;">YouTube ↗</a>
+            </p>
+          `);
         } else {
-          setError('Impossibile estrarre l\'ID del video da YouTube.');
+          setUsedFallback(true);
         }
         setLoading(false);
         return;
       }
+
 
       // 1. Best case: full content already in the RSS feed (e.g. Marx21, WordPress sites)
       if (article.fullContent && article.fullContent.trim().length > 100) {
