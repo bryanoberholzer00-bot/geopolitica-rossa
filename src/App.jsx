@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { RefreshCw, Radio, ExternalLink, X, Star, Bookmark, Sun, Moon } from 'lucide-react';
+import { RefreshCw, Radio, ExternalLink, X, Star, Bookmark, Sun, Moon, Menu } from 'lucide-react';
 import { FEEDS, fetchFeed } from './FeedService';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -228,6 +228,9 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Sidebar mobile state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   // Tema State
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('geopolitica_theme') || 'dark';
@@ -318,9 +321,23 @@ function App() {
   const youtubeArticles = filteredArticles.filter(a => youtubeFeedIds.includes(a.sourceId));
   const regularArticles = filteredArticles.filter(a => !youtubeFeedIds.includes(a.sourceId));
 
+  const selectFeed = (id) => {
+    setActiveFeed(id);
+    setActiveTag(null);
+    setSidebarOpen(false); // close drawer on mobile
+  };
+
   return (
     <div className="app-container">
-      <aside className="sidebar glass-panel" style={{ borderRadius: 0 }}>
+      {/* Hamburger button — mobile only */}
+      <button className="hamburger-btn" onClick={() => setSidebarOpen(o => !o)} aria-label="Menu">
+        <Menu size={22} />
+      </button>
+
+      {/* Dark overlay behind open sidebar */}
+      <div className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} onClick={() => setSidebarOpen(false)} />
+
+      <aside className={`sidebar glass-panel ${sidebarOpen ? 'mobile-open' : 'mobile-closed'}`} style={{ borderRadius: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 className="text-gradient">Geopolitica Rossa</h1>
@@ -336,7 +353,7 @@ function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
           <button 
             className={activeFeed === 'all' ? 'active' : ''} 
-            onClick={() => { setActiveFeed('all'); setActiveTag(null); }}
+            onClick={() => selectFeed('all')}
           >
             <Radio size={18} />
             Tutte le Notizie
@@ -344,7 +361,7 @@ function App() {
           
           <button 
             className={activeFeed === 'bookmarks' ? 'active' : ''} 
-            onClick={() => { setActiveFeed('bookmarks'); setActiveTag(null); }}
+            onClick={() => selectFeed('bookmarks')}
           >
             <Bookmark size={18} />
             I Miei Salvataggi
@@ -355,7 +372,7 @@ function App() {
             <button 
               key={feed.id}
               className={activeFeed === feed.id ? 'active' : ''}
-              onClick={() => { setActiveFeed(feed.id); setActiveTag(null); }}
+              onClick={() => selectFeed(feed.id)}
             >
               {feed.name}
             </button>
@@ -366,7 +383,7 @@ function App() {
             <button 
               key={feed.id}
               className={activeFeed === feed.id ? 'active' : ''}
-              onClick={() => { setActiveFeed(feed.id); setActiveTag(null); }}
+              onClick={() => selectFeed(feed.id)}
             >
               {feed.name}
             </button>
@@ -377,7 +394,7 @@ function App() {
             <button 
               key={feed.id}
               className={activeFeed === feed.id ? 'active' : ''}
-              onClick={() => { setActiveFeed(feed.id); setActiveTag(null); }}
+              onClick={() => selectFeed(feed.id)}
             >
               {feed.name}
             </button>
@@ -388,7 +405,7 @@ function App() {
             <button 
               key={feed.id}
               className={activeFeed === feed.id ? 'active' : ''}
-              onClick={() => { setActiveFeed(feed.id); setActiveTag(null); }}
+              onClick={() => selectFeed(feed.id)}
             >
               {feed.name}
             </button>
