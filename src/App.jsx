@@ -106,17 +106,26 @@ const ReaderModal = ({ article, onClose }) => {
           a.setAttribute('rel', 'noopener noreferrer');
         });
 
-        // Fix images with referrer + deduplicate identical images
-        const seenSrcs = new Set();
+        // WordPress always puts the featured image first in content:encoded.
+        // If article already has article.image, remove the first <img> to avoid duplication.
+        if (article.image) {
+          const firstImg = tmp.querySelector('img');
+          if (firstImg) firstImg.remove();
+        }
+
+        // Deduplicate remaining images by filename stem (handles -300x200 vs -scaled variants)
+        const seenStems = new Set();
         tmp.querySelectorAll('img').forEach(img => {
           img.setAttribute('referrerpolicy', 'no-referrer');
           img.style.maxWidth = '100%';
           img.style.height = 'auto';
           const src = img.getAttribute('src') || '';
-          if (src && seenSrcs.has(src)) {
-            img.remove(); // remove duplicate image
-          } else if (src) {
-            seenSrcs.add(src);
+          // Extract filename without size suffix: "photo-300x200.jpg" -> "photo"
+          const stem = src.replace(/[-_]\d+x\d+/, '').split('/').pop().split('.')[0];
+          if (stem && seenStems.has(stem)) {
+            img.remove();
+          } else if (stem) {
+            seenStems.add(stem);
           }
         });
         setContent(tmp.innerHTML);
