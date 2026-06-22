@@ -106,13 +106,19 @@ const ReaderModal = ({ article, onClose }) => {
           a.setAttribute('rel', 'noopener noreferrer');
         });
 
-        // Fix images with referrer
+        // Fix images with referrer + deduplicate identical images
+        const seenSrcs = new Set();
         tmp.querySelectorAll('img').forEach(img => {
           img.setAttribute('referrerpolicy', 'no-referrer');
           img.style.maxWidth = '100%';
           img.style.height = 'auto';
+          const src = img.getAttribute('src') || '';
+          if (src && seenSrcs.has(src)) {
+            img.remove(); // remove duplicate image
+          } else if (src) {
+            seenSrcs.add(src);
+          }
         });
-
         setContent(tmp.innerHTML);
         setLoading(false);
         return;
