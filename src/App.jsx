@@ -56,8 +56,11 @@ const ReaderModal = ({ article, onClose }) => {
     bodyRef.current.querySelectorAll('img').forEach(img => {
       if (img.style.display === 'none') return;
       const src = img.getAttribute('src') || '';
-      // Strip size suffixes: "photo-300x200.jpg" → "photo", "photo-scaled.jpg" → "photo"
-      const stem = src.replace(/[-_](scaled|\d+x\d+)(\.[^.]+)?$/, '').split('/').pop();
+      // Strip size suffix AND extension: "photo-300x200.jpg" → "photo", "photo-scaled.jpg" → "photo", "photo.jpg" → "photo"
+      const stem = src
+        .replace(/[-_](scaled|\d+x\d+)(\.[^.?#]+)?(\?.*)?$/, '')
+        .split('/').pop()
+        .replace(/\.[^.]+$/, ''); // strip remaining extension
       if (stem && seenStems.has(stem)) {
         img.remove();
       } else if (stem) {
