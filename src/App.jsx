@@ -50,23 +50,6 @@ const ReaderModal = ({ article, onClose }) => {
       // Hide if broken
       img.onerror = () => { img.style.display = 'none'; };
     });
-
-    // Deduplicate images by filename stem (catches WordPress double-featured-image)
-    const seenStems = new Set();
-    bodyRef.current.querySelectorAll('img').forEach(img => {
-      if (img.style.display === 'none') return;
-      const src = img.getAttribute('src') || '';
-      // Strip size suffix AND extension: "photo-300x200.jpg" → "photo", "photo-scaled.jpg" → "photo", "photo.jpg" → "photo"
-      const stem = src
-        .replace(/[-_](scaled|\d+x\d+)(\.[^.?#]+)?(\?.*)?$/, '')
-        .split('/').pop()
-        .replace(/\.[^.]+$/, ''); // strip remaining extension
-      if (stem && seenStems.has(stem)) {
-        img.remove();
-      } else if (stem) {
-        seenStems.add(stem);
-      }
-    });
   }, [content, loading]);
 
   useEffect(() => {
@@ -123,28 +106,30 @@ const ReaderModal = ({ article, onClose }) => {
           a.setAttribute('rel', 'noopener noreferrer');
         });
 
-        // WordPress always puts the featured image first in content:encoded.
-        // If article already has article.image, remove the first <img> to avoid duplication.
+        // Remove images from fullContent that duplicate article.image (shown as hero above)
         if (article.image) {
-          const firstImg = tmp.querySelector('img');
-          if (firstImg) firstImg.remove();
+          const heroStem = article.image
+            .replace(/[-_](scaled|\d+x\d+)(\.[^.?#]+)?(\?.*)?$/, '')
+            .split('/').pop()
+            .replace(/\.[^.]+$/, '');
+          tmp.querySelectorAll('img').forEach(img => {
+            const src = img.getAttribute('src') || '';
+            const stem = src
+              .replace(/[-_](scaled|\d+x\d+)(\.[^.?#]+)?(\?.*)?$/, '')
+              .split('/').pop()
+              .replace(/\.[^.]+$/, '');
+            if (stem && stem === heroStem) img.remove();
+          });
         }
 
-        // Deduplicate remaining images by filename stem (handles -300x200 vs -scaled variants)
-        const seenStems = new Set();
+        // Fix remaining images
         tmp.querySelectorAll('img').forEach(img => {
           img.setAttribute('referrerpolicy', 'no-referrer');
           img.style.maxWidth = '100%';
           img.style.height = 'auto';
-          const src = img.getAttribute('src') || '';
-          // Extract filename without size suffix: "photo-300x200.jpg" -> "photo"
-          const stem = src.replace(/[-_]\d+x\d+/, '').split('/').pop().split('.')[0];
-          if (stem && seenStems.has(stem)) {
-            img.remove();
-          } else if (stem) {
-            seenStems.add(stem);
-          }
         });
+
+        setShowHeroImage(true); // always show hero image for RSS full content
         setContent(tmp.innerHTML);
         setLoading(false);
         return;
