@@ -50,6 +50,20 @@ const ReaderModal = ({ article, onClose }) => {
       // Hide if broken
       img.onerror = () => { img.style.display = 'none'; };
     });
+
+    // Deduplicate images by filename stem (catches WordPress double-featured-image)
+    const seenStems = new Set();
+    bodyRef.current.querySelectorAll('img').forEach(img => {
+      if (img.style.display === 'none') return;
+      const src = img.getAttribute('src') || '';
+      // Strip size suffixes: "photo-300x200.jpg" → "photo", "photo-scaled.jpg" → "photo"
+      const stem = src.replace(/[-_](scaled|\d+x\d+)(\.[^.]+)?$/, '').split('/').pop();
+      if (stem && seenStems.has(stem)) {
+        img.remove();
+      } else if (stem) {
+        seenStems.add(stem);
+      }
+    });
   }, [content, loading]);
 
   useEffect(() => {
