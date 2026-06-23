@@ -76,38 +76,52 @@ app.get('/api/rss', async (req, res) => {
   }
 });
 
-// YouTube channel videos via Piped API (bypasses YouTube IP blocking)
-const PIPED_INSTANCES = [
-  'https://pipedapi.kavin.rocks',
-  'https://piped-api.garudalinux.org',
-  'https://api.piped.yt',
-];
-
+// YouTube channel videos via HTML scraping (no API key needed, no IP blocking)
 app.get('/api/youtube-channel', async (req, res) => {
   const channelId = req.query.id;
   if (!channelId) return res.status(400).send('Missing id');
 
-  for (const instance of PIPED_INSTANCES) {
-    try {
-      const r = await fetch(`${instance}/channel/${channelId}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(8000),
+  try {
+    const ytUrl = `https://www.youtube.com/channel/${channelId}/videos`;
+    const r = await fetch(ytUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return res.status(r.status).json([]);
+
+    const html = await r.text();
+    // YouTube embeds all page data as JSON in a script tag
+    const match = html.match(/var ytInitialData = ({.+?});<\/script>/s);
+    if (!match) return res.status(502).json([]);
+
+    const data = JSON.parse(match[1]);
+    // Navigate the JSON to find video items
+    const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+    const videosTab = tabs.find(t => t?.tabRenderer?.title === 'Videos' || t?.tabRenderer?.selected);
+    const items = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
+
+    const videos = items
+      .filter(i => i?.richItemRenderer?.content?.videoRenderer)
+      .slice(0, 15)
+      .map(i => {
+        const v = i.richItemRenderer.content.videoRenderer;
+        const videoId = v.videoId;
+        const thumb = v.thumbnail?.thumbnails?.at(-1)?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+        const title = v.title?.runs?.[0]?.text || '';
+        const desc = v.descriptionSnippet?.runs?.[0]?.text || '';
+        const date = v.publishedTimeText?.simpleText || null;
+        return { url: `/watch?v=${videoId}`, title, thumbnail: thumb, shortDescription: desc, uploadedDate: date };
       });
-      if (!r.ok) continue;
-      const data = await r.json();
-      const videos = (data.relatedStreams || data.videos || []).slice(0, 15).map(v => ({
-        url: v.url,
-        title: v.title,
-        thumbnail: v.thumbnail,
-        shortDescription: v.shortDescription || '',
-        uploadedDate: v.uploadedDate || null,
-      }));
-      return res.json(videos);
-    } catch (e) {
-      console.warn(`Piped instance ${instance} failed:`, e.message);
-    }
+
+    res.json(videos);
+  } catch (e) {
+    console.error('YouTube scrape error:', e.message);
+    res.status(503).json([]);
   }
-  res.status(503).json([]);
 });
 
 app.get('/api/scrape-image', async (req, res) => {
