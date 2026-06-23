@@ -167,6 +167,10 @@ app.get('/api/scrape-image', async (req, res) => {
   const targetUrl = req.query.url;
   if (!targetUrl) return res.status(400).json({ image: null });
 
+  // Paths that clearly indicate logos/banners — not article images
+  const LOGO_PATTERNS = /\/(testate|logos?|banner|header|footer|icon|placeholder|avatar|brand|sprite)\//i;
+  const isLogoUrl = (url) => url && LOGO_PATTERNS.test(url);
+
   try {
     const response = await fetch(targetUrl, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(8000) });
     if (!response.ok) return res.json({ image: null });
@@ -177,7 +181,7 @@ app.get('/api/scrape-image', async (req, res) => {
     // 1. Try og:image (both attribute orders)
     const ogMatch = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i)
                  || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:image"/i);
-    if (ogMatch?.[1]) {
+    if (ogMatch?.[1] && !isLogoUrl(ogMatch[1])) {
       imageUrl = ogMatch[1];
       // If Jetpack redirect, decode JWT to get real image URL
       if (imageUrl.includes('jetpack.com')) {
@@ -186,23 +190,27 @@ app.get('/api/scrape-image', async (req, res) => {
           if (queryMatch) {
             const jwtPart = queryMatch[1].split('.')[0];
             const decoded = JSON.parse(Buffer.from(jwtPart, 'base64url').toString('utf-8'));
-            if (decoded.img) imageUrl = decoded.img;
+            if (decoded.img && !isLogoUrl(decoded.img)) imageUrl = decoded.img;
+            else imageUrl = null;
           }
-        } catch {}
+        } catch { imageUrl = null; }
       }
     }
 
     // 2. WordPress featured image (reliable fallback for WP sites)
-    if (!imageUrl || imageUrl.includes('jetpack.com')) {
+    if (!imageUrl) {
       const wpMatch = html.match(/<img[^>]+class="[^"]*wp-post-image[^"]*"[^>]+src="([^"]+)"/i)
                    || html.match(/<img[^>]+src="([^"]+)"[^>]+class="[^"]*wp-post-image[^"]*"/i);
-      if (wpMatch?.[1]) imageUrl = wpMatch[1];
+      if (wpMatch?.[1] && !isLogoUrl(wpMatch[1])) imageUrl = wpMatch[1];
     }
 
-    // 3. Fallback: first large img in page
+    // 3. Fallback: first large img that isn't a logo path
     if (!imageUrl) {
-      const imgMatch = html.match(/<img[^>]+src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/i);
-      if (imgMatch?.[1]) imageUrl = imgMatch[1];
+      const imgRegex = /<img[^>]+src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/gi;
+      let m;
+      while ((m = imgRegex.exec(html)) !== null) {
+        if (!isLogoUrl(m[1])) { imageUrl = m[1]; break; }
+      }
     }
 
     res.json({ image: imageUrl || null });
