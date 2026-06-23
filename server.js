@@ -76,6 +76,39 @@ app.get('/api/rss', async (req, res) => {
   }
 });
 
+// YouTube channel videos via Piped API (bypasses YouTube IP blocking)
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://piped-api.garudalinux.org',
+  'https://api.piped.yt',
+];
+
+app.get('/api/youtube-channel', async (req, res) => {
+  const channelId = req.query.id;
+  if (!channelId) return res.status(400).send('Missing id');
+
+  for (const instance of PIPED_INSTANCES) {
+    try {
+      const r = await fetch(`${instance}/channel/${channelId}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) continue;
+      const data = await r.json();
+      const videos = (data.relatedStreams || data.videos || []).slice(0, 15).map(v => ({
+        url: v.url,
+        title: v.title,
+        thumbnail: v.thumbnail,
+        shortDescription: v.shortDescription || '',
+        uploadedDate: v.uploadedDate || null,
+      }));
+      return res.json(videos);
+    } catch (e) {
+      console.warn(`Piped instance ${instance} failed:`, e.message);
+    }
+  }
+  res.status(503).json([]);
+});
 
 app.get('/api/scrape-image', async (req, res) => {
   const targetUrl = req.query.url;

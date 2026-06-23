@@ -70,14 +70,31 @@ const extractSnippet = (node) => {
 
 export const fetchFeed = async (feed) => {
   try {
-    // YouTube feeds work directly from browsers (server IPs are blocked by YouTube).
-    // All other feeds use the server proxy to handle CORS.
-    const isYouTube = feed.url.includes('youtube.com');
-    const fetchUrl = isYouTube
-      ? `${feed.url}&t=${Date.now()}`
-      : `${API_BASE}/api/rss?url=${encodeURIComponent(feed.url)}&t=${Date.now()}`;
+    // For YouTube channels, use our /api/youtube-channel proxy (Piped API)
+    // For all other feeds, use the standard RSS proxy
+    if (feed.url.includes('youtube.com')) {
+      const match = feed.url.match(/channel_id=([^&]+)/);
+      if (!match) throw new Error('No channel_id found');
+      const channelId = match[1];
+      const response = await fetch(`${API_BASE}/api/youtube-channel?id=${channelId}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`YouTube channel error: ${response.status}`);
+      const videos = await response.json();
+      return videos.map(v => ({
+        id: v.url,
+        title: v.title,
+        link: `https://www.youtube.com${v.url}`,
+        pubDate: v.uploadedDate ? new Date(v.uploadedDate) : new Date(),
+        snippet: v.shortDescription || '',
+        image: v.thumbnail,
+        sourceName: feed.name,
+        sourceId: feed.id,
+        fullContent: null,
+        categories: [],
+      }));
+    }
 
-    const response = await fetch(fetchUrl, { cache: 'no-store' });
+    const proxyUrl = `${API_BASE}/api/rss?url=${encodeURIComponent(feed.url)}&t=${Date.now()}`;
+    const response = await fetch(proxyUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const text = await response.text();
