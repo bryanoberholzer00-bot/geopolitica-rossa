@@ -27,23 +27,30 @@ const decodeHTML = (html) => {
 
 // Helper to extract an image from description or content
 const extractImage = (node) => {
-  // Check enclosure
-  const enclosure = node.querySelector('enclosure');
-  if (enclosure && enclosure.getAttribute('url')) {
-    return enclosure.getAttribute('url');
-  }
-  
-  // Check media:thumbnail
-  const mediaContent = node.getElementsByTagNameNS('*', 'thumbnail');
-  if (mediaContent.length > 0 && mediaContent[0].getAttribute('url')) {
-    return mediaContent[0].getAttribute('url');
+  // Check media:content (WordPress standard)
+  const mediaContent = node.getElementsByTagNameNS('*', 'content');
+  for (let i = 0; i < mediaContent.length; i++) {
+    const url = mediaContent[i].getAttribute('url');
+    const medium = mediaContent[i].getAttribute('medium');
+    if (url && (!medium || medium === 'image')) return url;
   }
 
-  // Fallback to searching first img tag in description or encoded content
+  // Check media:thumbnail
+  const mediaThumbnail = node.getElementsByTagNameNS('*', 'thumbnail');
+  if (mediaThumbnail.length > 0 && mediaThumbnail[0].getAttribute('url')) {
+    return mediaThumbnail[0].getAttribute('url');
+  }
+
+  // Check enclosure
+  const enclosure = node.querySelector('enclosure');
+  if (enclosure && enclosure.getAttribute('url') && enclosure.getAttribute('type')?.startsWith('image')) {
+    return enclosure.getAttribute('url');
+  }
+
+  // Fallback: first img tag in content:encoded or description
   let content = '';
   let encoded = node.getElementsByTagNameNS('*', 'encoded');
   if (encoded.length === 0) encoded = node.getElementsByTagName('content:encoded');
-  
   if (encoded.length > 0) content = encoded[0].textContent;
   else {
     const desc = node.querySelector('description');
@@ -52,9 +59,7 @@ const extractImage = (node) => {
 
   if (content) {
     const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
-    if (imgMatch && imgMatch[1]) {
-      return imgMatch[1];
-    }
+    if (imgMatch && imgMatch[1]) return imgMatch[1];
   }
 
   return null;
