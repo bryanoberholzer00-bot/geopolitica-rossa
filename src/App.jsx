@@ -230,7 +230,14 @@ const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
   return (
     <div onClick={() => onClick(article)} className="article-card glass-panel" style={{ cursor: 'pointer' }}>
       {article.image && (
-        <img src={article.image} alt={article.title} className="article-image" loading="lazy" referrerPolicy="no-referrer" />
+        <img
+          src={article.image}
+          alt={article.title}
+          className="article-image"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          onError={e => { e.target.style.display = 'none'; }}
+        />
       )}
       <div className="article-content">
         <div className="article-meta">
