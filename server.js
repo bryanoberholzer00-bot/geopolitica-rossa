@@ -33,9 +33,35 @@ app.get('/api/rss', async (req, res) => {
       return res.status(400).send('Missing url parameter');
     }
 
-    const response = await fetch(targetUrl, {
-      headers: { ...BROWSER_HEADERS, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' }
-    });
+    const isYouTube = targetUrl.includes('youtube.com');
+
+    // YouTube needs specific headers including a valid cookie and referer
+    const youtubeHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+      'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Referer': 'https://www.youtube.com/',
+      'Origin': 'https://www.youtube.com',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Cookie': 'CONSENT=YES+; GPS=1; VISITOR_INFO1_LIVE=; YSC=; PREF=tz=Europe.Rome',
+    };
+
+    const headers = isYouTube
+      ? youtubeHeaders
+      : { ...BROWSER_HEADERS, 'Accept': 'application/rss+xml, application/xml, text/xml, */*' };
+
+    let response = await fetch(targetUrl, { headers });
+
+    // Retry once for YouTube with slightly different headers if first attempt fails
+    if (!response.ok && isYouTube) {
+      await new Promise(r => setTimeout(r, 1000));
+      response = await fetch(targetUrl, {
+        headers: { ...youtubeHeaders, 'User-Agent': 'Googlebot/2.1 (+http://www.google.com/bot.html)' }
+      });
+    }
 
     if (!response.ok) {
       return res.status(response.status).send(`Target responded with ${response.status}`);
@@ -49,6 +75,7 @@ app.get('/api/rss', async (req, res) => {
     res.status(500).send(error.message);
   }
 });
+
 
 app.get('/api/scrape-image', async (req, res) => {
   const targetUrl = req.query.url;
