@@ -70,26 +70,25 @@ const extractSnippet = (node) => {
 
 export const fetchFeed = async (feed) => {
   try {
-    // For YouTube channels, use our /api/youtube-channel proxy (Piped API)
-    // For all other feeds, use the standard RSS proxy
+    // For YouTube channels, use rss2json.com which proxies YouTube feeds
+    // from its own servers (not blocked), supports CORS, no API key needed
     if (feed.url.includes('youtube.com')) {
-      const match = feed.url.match(/channel_id=([^&]+)/);
-      if (!match) throw new Error('No channel_id found');
-      const channelId = match[1];
-      const response = await fetch(`${API_BASE}/api/youtube-channel?id=${channelId}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`YouTube channel error: ${response.status}`);
-      const videos = await response.json();
-      return videos.map(v => ({
-        id: v.url,
-        title: v.title,
-        link: `https://www.youtube.com${v.url}`,
-        pubDate: v.uploadedDate ? new Date(v.uploadedDate) : new Date(),
-        snippet: v.shortDescription || '',
-        image: v.thumbnail,
+      const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
+      const response = await fetch(rss2jsonUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`rss2json error: ${response.status}`);
+      const data = await response.json();
+      if (data.status !== 'ok') throw new Error(`rss2json status: ${data.status}`);
+      return data.items.map(item => ({
+        id: item.guid,
+        title: item.title,
+        link: item.link,
+        pubDate: new Date(item.pubDate),
+        snippet: item.description || '',
+        image: item.thumbnail || item.enclosure?.thumbnail || '',
         sourceName: feed.name,
         sourceId: feed.id,
         fullContent: null,
-        categories: [],
+        categories: item.categories || [],
       }));
     }
 
