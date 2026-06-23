@@ -236,13 +236,20 @@ const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
           alt={article.title}
           className="article-image"
           loading="lazy"
+          onLoad={e => {
+            const img = e.target;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            // Banner/logo images (very wide): use contain so text isn't cropped
+            if (ratio > 2.5) {
+              img.style.objectFit = 'contain';
+              img.style.padding = '1rem 1.5rem';
+            }
+          }}
           onError={e => {
-            // First try: proxy with spoofed Referer to bypass hotlink protection
             if (!e.target.dataset.proxied) {
               e.target.dataset.proxied = '1';
               e.target.src = `/api/img?url=${encodeURIComponent(image)}`;
             } else {
-              // Second try failed too — hide the image
               e.target.style.display = 'none';
             }
           }}
