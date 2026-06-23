@@ -26,16 +26,33 @@ const ReaderModal = ({ article, onClose }) => {
   useEffect(() => {
     if (!bodyRef.current || loading) return;
     const baseUrl = article.link ? new URL(article.link).origin : '';
+
+    // Get hero image filename for dedup
+    const heroFilename = article.image
+      ? article.image.split('/').pop().split('?')[0].replace(/[-_]\d+x\d+(\.[^.]+)?$/, '').replace(/\.[^.]+$/, '')
+      : '';
+
     bodyRef.current.querySelectorAll('img').forEach(img => {
       const src = img.getAttribute('src') || '';
       const alt = (img.getAttribute('alt') || '').toLowerCase();
       const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-lazy-src');
       const w = parseInt(img.getAttribute('width') || '999');
       const h = parseInt(img.getAttribute('height') || '999');
+
+      // Hide avatars, tiny images
       const isAvatar = w <= 150 || h <= 150
         || src.includes('avatar') || src.includes('f100x') || src.includes('author')
         || alt.includes('redazione') || alt.includes('autore') || alt.includes('author');
-      if (isAvatar) { img.style.display = 'none'; return; }
+
+      // Hide banners/logos: very wide and short (e.g. Contropiano.org logo)
+      const isBanner = w !== 999 && h !== 999 && (w / h) > 3;
+
+      // Hide if same file as hero image
+      const srcFilename = src.split('/').pop().split('?')[0].replace(/[-_]\d+x\d+(\.[^.]+)?$/, '').replace(/\.[^.]+$/, '');
+      const isDuplicateHero = heroFilename && srcFilename && srcFilename === heroFilename;
+
+      if (isAvatar || isBanner || isDuplicateHero) { img.style.display = 'none'; return; }
+
       img.setAttribute('referrerpolicy', 'no-referrer');
       img.removeAttribute('loading');
       img.style.maxWidth = '100%';
@@ -47,7 +64,7 @@ const ReaderModal = ({ article, onClose }) => {
       img.onerror = () => { img.style.display = 'none'; };
     });
 
-    // Deduplicate images by filename stem
+    // Deduplicate remaining images by filename stem
     const seenStems = new Set();
     bodyRef.current.querySelectorAll('img').forEach(img => {
       if (img.style.display === 'none') return;
@@ -60,6 +77,7 @@ const ReaderModal = ({ article, onClose }) => {
       if (seenStems.has(stem)) { img.remove(); } else { seenStems.add(stem); }
     });
   }, [content, loading]);
+
 
   useEffect(() => {
     const loadContent = async () => {
