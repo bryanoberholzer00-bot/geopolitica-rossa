@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { RefreshCw, Radio, ExternalLink, X, Star, Bookmark, Sun, Moon, Menu, Share2, ChevronUp, Type, Search } from 'lucide-react';
 import { FEEDS, fetchFeed } from './FeedService';
 import { formatDistanceToNow } from 'date-fns';
@@ -284,7 +284,6 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const mainRef = useRef(null);
 
   const [bookmarks, setBookmarks] = useState(() => {
     const saved = localStorage.getItem('geopolitica_bookmarks');
@@ -304,16 +303,14 @@ function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
-  // Back to top scroll detection
+  // Back to top scroll detection (window-level scroll)
   useEffect(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    const onScroll = () => setShowBackToTop(el.scrollTop > 400);
-    el.addEventListener('scroll', onScroll);
-    return () => el.removeEventListener('scroll', onScroll);
+    const onScroll = () => setShowBackToTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const scrollToTop = () => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const toggleBookmark = (article) => {
     setBookmarks(prev => {
@@ -461,7 +458,7 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-content" ref={mainRef}>
+      <main className="main-content">
         {loading && articles.length === 0 ? (
           <div className="loading-container">
             <div className="loader"></div>
