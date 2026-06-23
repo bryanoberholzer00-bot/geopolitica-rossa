@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { RefreshCw, Radio, ExternalLink, X, Star, Bookmark, Sun, Moon, Menu, Share2, ChevronUp, Type, Search } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { RefreshCw, Radio, ExternalLink, X, Star, Bookmark, Sun, Moon, Menu, Share2, ChevronUp, Search } from 'lucide-react';
 import { FEEDS, fetchFeed } from './FeedService';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -275,6 +275,10 @@ const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
   );
 };
 
+const CountBadge = ({ count }) => count > 0 ? (
+  <span style={{ marginLeft: 'auto', background: 'var(--accent-primary)', color: 'white', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', minWidth: '1.4rem', textAlign: 'center' }}>{count}</span>
+) : null;
+
 function App() {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -382,9 +386,7 @@ function App() {
     setSidebarOpen(false);
   };
 
-  const CountBadge = ({ count }) => count > 0 ? (
-    <span style={{ marginLeft: 'auto', background: 'var(--accent-primary)', color: 'white', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: '700', minWidth: '1.4rem', textAlign: 'center' }}>{count}</span>
-  ) : null;
+
 
   return (
     <div className="app-container">
@@ -476,13 +478,13 @@ function App() {
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
                   width: '100%', padding: '0.75rem 1rem 0.75rem 2.75rem',
-                  background: 'var(--tag-bg)', border: '1px solid var(--border)',
+                  background: 'var(--tag-bg)', border: '1px solid var(--border-glass)',
                   borderRadius: '12px', color: 'var(--text-primary)', fontSize: '0.95rem',
                   outline: 'none', boxSizing: 'border-box',
                   transition: 'border-color 0.2s',
                 }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent-primary)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border-glass)'}
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')}
@@ -513,7 +515,7 @@ function App() {
 
             {regularArticles.length > 0 && (
               <section className="feed-section">
-                <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.5rem' }}>
                   {activeFeed === 'bookmarks' ? 'Articoli Salvati' : 'Articoli e Analisi'}
                   <span style={{ marginLeft: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 400 }}>({regularArticles.length})</span>
                 </h2>
@@ -528,7 +530,7 @@ function App() {
 
             {youtubeArticles.length > 0 && (
               <section className="feed-section" style={{ marginTop: '3rem' }}>
-                <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.5rem' }}>
                   {activeFeed === 'bookmarks' ? 'Video Salvati' : 'Video da YouTube'}
                   <span style={{ marginLeft: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 400 }}>({youtubeArticles.length})</span>
                 </h2>
