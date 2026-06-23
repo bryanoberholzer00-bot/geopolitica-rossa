@@ -164,32 +164,50 @@ app.get('/api/img', async (req, res) => {
 });
 
 app.get('/api/scrape-image', async (req, res) => {
-
-
   const targetUrl = req.query.url;
-  if (!targetUrl) return res.status(400).send('Missing url parameter');
-  
+  if (!targetUrl) return res.status(400).json({ image: null });
+
   try {
-    const response = await fetch(targetUrl, {
-      headers: BROWSER_HEADERS
-    });
-    
-    if (!response.ok) return res.status(404).send('');
-    
+    const response = await fetch(targetUrl, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return res.json({ image: null });
+
     const html = await response.text();
-    let match = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i);
-    
-    if (!match) {
-        match = html.match(/<img[^>]+src="([^"]+(?:jpg|png|jpeg|webp))"[^>]*>/i);
+    let imageUrl = null;
+
+    // 1. Try og:image (both attribute orders)
+    const ogMatch = html.match(/<meta\s+(?:property|name)="og:image"\s+content="([^"]+)"/i)
+                 || html.match(/<meta\s+content="([^"]+)"\s+(?:property|name)="og:image"/i);
+    if (ogMatch?.[1]) {
+      imageUrl = ogMatch[1];
+      // If Jetpack redirect, decode JWT to get real image URL
+      if (imageUrl.includes('jetpack.com')) {
+        try {
+          const queryMatch = imageUrl.match(/[?&]query=([A-Za-z0-9+/=._-]+)/);
+          if (queryMatch) {
+            const jwtPart = queryMatch[1].split('.')[0];
+            const decoded = JSON.parse(Buffer.from(jwtPart, 'base64url').toString('utf-8'));
+            if (decoded.img) imageUrl = decoded.img;
+          }
+        } catch {}
+      }
     }
-    
-    if (match && match[1]) {
-      res.send(match[1]);
-    } else {
-      res.send('');
+
+    // 2. WordPress featured image (reliable fallback for WP sites)
+    if (!imageUrl || imageUrl.includes('jetpack.com')) {
+      const wpMatch = html.match(/<img[^>]+class="[^"]*wp-post-image[^"]*"[^>]+src="([^"]+)"/i)
+                   || html.match(/<img[^>]+src="([^"]+)"[^>]+class="[^"]*wp-post-image[^"]*"/i);
+      if (wpMatch?.[1]) imageUrl = wpMatch[1];
     }
-  } catch (error) {
-    res.status(500).send('');
+
+    // 3. Fallback: first large img in page
+    if (!imageUrl) {
+      const imgMatch = html.match(/<img[^>]+src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/i);
+      if (imgMatch?.[1]) imageUrl = imgMatch[1];
+    }
+
+    res.json({ image: imageUrl || null });
+  } catch (e) {
+    res.json({ image: null });
   }
 });
 
