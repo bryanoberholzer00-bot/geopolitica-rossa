@@ -86,20 +86,33 @@ app.get('/api/youtube-channel', async (req, res) => {
     const r = await fetch(ytUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        // SOCS cookie bypasses YouTube's consent page for server-side requests
+        'Cookie': 'SOCS=CAESEwgDEgk2Mzk4MjE5OTYaAmVuIAEaBgiA_LysBg; CONSENT=YES+cb; GPS=1',
       },
       signal: AbortSignal.timeout(10000),
     });
-    if (!r.ok) return res.status(r.status).json([]);
+
+    if (!r.ok) {
+      console.error(`YouTube fetch failed: ${r.status}`);
+      return res.status(r.status).json([]);
+    }
 
     const html = await r.text();
-    // YouTube embeds all page data as JSON in a script tag
-    const match = html.match(/var ytInitialData = ({.+?});<\/script>/s);
-    if (!match) return res.status(502).json([]);
+    const hasInitialData = html.includes('ytInitialData');
+    console.log(`YouTube HTML length: ${html.length}, hasInitialData: ${hasInitialData}`);
+    console.log(`First 500 chars: ${html.substring(0, 500)}`);
+
+    const match = html.match(/var ytInitialData\s*=\s*({.+?});\s*<\/script>/s)
+      || html.match(/ytInitialData\s*=\s*({.+?});\s*(?:\/\/|<)/s);
+
+    if (!match) {
+      console.error('ytInitialData not found in YouTube response');
+      return res.status(502).json([]);
+    }
 
     const data = JSON.parse(match[1]);
-    // Navigate the JSON to find video items
     const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
     const videosTab = tabs.find(t => t?.tabRenderer?.title === 'Videos' || t?.tabRenderer?.selected);
     const items = videosTab?.tabRenderer?.content?.richGridRenderer?.contents || [];
@@ -117,6 +130,7 @@ app.get('/api/youtube-channel', async (req, res) => {
         return { url: `/watch?v=${videoId}`, title, thumbnail: thumb, shortDescription: desc, uploadedDate: date };
       });
 
+    console.log(`Found ${videos.length} videos for channel ${channelId}`);
     res.json(videos);
   } catch (e) {
     console.error('YouTube scrape error:', e.message);
@@ -125,6 +139,7 @@ app.get('/api/youtube-channel', async (req, res) => {
 });
 
 app.get('/api/scrape-image', async (req, res) => {
+
   const targetUrl = req.query.url;
   if (!targetUrl) return res.status(400).send('Missing url parameter');
   
