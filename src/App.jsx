@@ -250,11 +250,20 @@ const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
     <div ref={cardRef} onClick={() => onClick(article)} className="article-card glass-panel" style={{ cursor: 'pointer' }}>
       {image && (
         <img
-          src={image.includes('ytimg.com') ? image : `/api/img?url=${encodeURIComponent(image)}`}
+          src={image}
           alt={article.title}
           className="article-image"
           loading="lazy"
-          onError={e => { e.target.style.display = 'none'; }}
+          onError={e => {
+            // First try: proxy with spoofed Referer to bypass hotlink protection
+            if (!e.target.dataset.proxied) {
+              e.target.dataset.proxied = '1';
+              e.target.src = `/api/img?url=${encodeURIComponent(image)}`;
+            } else {
+              // Second try failed too — hide the image
+              e.target.style.display = 'none';
+            }
+          }}
         />
       )}
       <div className="article-content">
