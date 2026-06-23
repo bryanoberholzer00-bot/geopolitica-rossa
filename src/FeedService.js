@@ -70,8 +70,14 @@ const extractSnippet = (node) => {
 
 export const fetchFeed = async (feed) => {
   try {
-    const proxyUrl = `${API_BASE}/api/rss?url=${encodeURIComponent(feed.url)}&t=${Date.now()}`;
-    const response = await fetch(proxyUrl, { cache: 'no-store' });
+    // YouTube feeds work directly from browsers (server IPs are blocked by YouTube).
+    // All other feeds use the server proxy to handle CORS.
+    const isYouTube = feed.url.includes('youtube.com');
+    const fetchUrl = isYouTube
+      ? `${feed.url}&t=${Date.now()}`
+      : `${API_BASE}/api/rss?url=${encodeURIComponent(feed.url)}&t=${Date.now()}`;
+
+    const response = await fetch(fetchUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const text = await response.text();
