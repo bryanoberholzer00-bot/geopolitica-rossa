@@ -216,24 +216,6 @@ const ReaderModal = ({ article, onClose }) => {
 const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
   const [copied, setCopied] = useState(false);
   const [image, setImage] = useState(article.image || null);
-  const cardRef = useRef(null);
-
-  // Lazy-load og:image for articles that have no image in the RSS feed
-  useEffect(() => {
-    if (image || !cardRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        observer.disconnect();
-        const apiBase = import.meta.env.PROD ? '' : 'http://127.0.0.1:3001';
-        fetch(`${apiBase}/api/scrape-image?url=${encodeURIComponent(article.link)}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(data => { if (data?.image) setImage(data.image); })
-          .catch(() => {});
-      }
-    }, { rootMargin: '200px', threshold: 0 });
-    observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   const shareArticle = async (e) => {
     e.stopPropagation();
@@ -247,7 +229,7 @@ const ArticleCard = ({ article, onClick, isBookmarked, onBookmarkToggle }) => {
   };
 
   return (
-    <div ref={cardRef} onClick={() => onClick(article)} className="article-card glass-panel" style={{ cursor: 'pointer' }}>
+    <div onClick={() => onClick(article)} className="article-card glass-panel" style={{ cursor: 'pointer' }}>
       {image && (
         <img
           src={image}

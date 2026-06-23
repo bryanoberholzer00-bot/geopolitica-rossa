@@ -120,14 +120,14 @@ export const fetchFeed = async (feed) => {
       
       let image = extractImage(item);
       
-      // Fallback: se l'RSS non contiene immagini, chiediamo al nostro proxy di raschiare la pagina HTML
+      // Fallback: se l'RSS non contiene immagini, raschia la pagina HTML
       if (!image && link && link !== '#') {
          try {
             const scrapeUrl = `${API_BASE}/api/scrape-image?url=${encodeURIComponent(link)}`;
             const scrapeRes = await fetch(scrapeUrl);
             if (scrapeRes.ok) {
-               const scrapedImg = await scrapeRes.text();
-               if (scrapedImg) image = scrapedImg;
+               const data = await scrapeRes.json();
+               if (data?.image) image = data.image;
             }
          } catch(e) {
             console.log('Scrape fallito per', link);
