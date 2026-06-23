@@ -138,7 +138,33 @@ app.get('/api/youtube-channel', async (req, res) => {
   }
 });
 
+// Image proxy: fetches images server-side with spoofed Referer to bypass hotlink protection
+app.get('/api/img', async (req, res) => {
+  const imageUrl = req.query.url;
+  if (!imageUrl) return res.status(400).send('Missing url');
+  try {
+    const origin = new URL(imageUrl).origin;
+    const r = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Referer': origin + '/',
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return res.status(r.status).send('');
+    const contentType = r.headers.get('content-type') || 'image/jpeg';
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    const buf = await r.arrayBuffer();
+    res.send(Buffer.from(buf));
+  } catch (e) {
+    res.status(500).send('');
+  }
+});
+
 app.get('/api/scrape-image', async (req, res) => {
+
 
   const targetUrl = req.query.url;
   if (!targetUrl) return res.status(400).send('Missing url parameter');
