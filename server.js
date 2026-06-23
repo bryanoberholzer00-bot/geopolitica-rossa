@@ -204,12 +204,15 @@ app.get('/api/scrape-image', async (req, res) => {
       if (wpMatch?.[1] && !isLogoUrl(wpMatch[1])) imageUrl = wpMatch[1];
     }
 
-    // 3. Fallback: first large img that isn't a logo path
+    // 3. Fallback: first img (absolute or relative) that isn't a logo path
     if (!imageUrl) {
-      const imgRegex = /<img[^>]+src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/gi;
+      const pageOrigin = new URL(targetUrl).origin;
+      const imgRegex = /<img[^>]+src="((?:https?:\/\/|\/)[^"]+\.(?:jpg|jpeg|png|webp))"/gi;
       let m;
       while ((m = imgRegex.exec(html)) !== null) {
-        if (!isLogoUrl(m[1])) { imageUrl = m[1]; break; }
+        let url = m[1];
+        if (url.startsWith('/')) url = pageOrigin + url;
+        if (!isLogoUrl(url)) { imageUrl = url; break; }
       }
     }
 
