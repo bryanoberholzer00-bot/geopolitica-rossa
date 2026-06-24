@@ -164,32 +164,33 @@ const ReaderModal = ({ article, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
         {/* Reading progress bar */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'var(--border)', borderRadius: '12px 12px 0 0', overflow: 'hidden', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'var(--border)', borderRadius: '18px 18px 0 0', overflow: 'hidden', zIndex: 10 }}>
           <div style={{ height: '100%', width: `${readProgress}%`, background: 'var(--accent-primary)', transition: 'width 0.1s ease' }} />
         </div>
 
-        <button className="modal-close" onClick={onClose}><X size={24} /></button>
+        {/* Drag handle — visible on mobile only */}
+        <div className="modal-drag-handle" />
+
+        <button className="modal-close" onClick={onClose}><X size={20} /></button>
 
         <div className="modal-header">
           <span className="source-badge">{article.sourceName}</span>
           <h2>{article.title}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
             <a href={article.link} target="_blank" rel="noopener noreferrer" className="original-link">
-              Vedi originale <ExternalLink size={14} />
+              Vedi originale <ExternalLink size={13} />
             </a>
-            {/* Font size controls */}
-            <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', gap: '0.2rem', marginLeft: 'auto' }}>
               <button onClick={() => setFontSize(f => Math.max(0.8, f - 0.1))}
-                style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-secondary)', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }} title="Riduci testo">A-</button>
+                style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-secondary)', padding: '0.25rem 0.55rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' }} title="Riduci testo">A-</button>
               <button onClick={() => setFontSize(f => Math.min(1.6, f + 0.1))}
-                style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-primary)', padding: '0.3rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.95rem' }} title="Ingrandisci testo">A+</button>
+                style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-primary)', padding: '0.25rem 0.55rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.92rem' }} title="Ingrandisci testo">A+</button>
+              <button onClick={shareArticle}
+                style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-secondary)', padding: '0.25rem 0.55rem', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem' }}
+                title="Condividi">
+                {copied ? '✓' : <Share2 size={13} />}
+              </button>
             </div>
-            {/* Share button */}
-            <button onClick={shareArticle}
-              style={{ background: 'var(--tag-bg)', border: 'none', color: 'var(--text-secondary)', padding: '0.3rem 0.75rem', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-              title="Condividi">
-              {copied ? '✓ Copiato!' : <><Share2 size={14} /> Condividi</>}
-            </button>
           </div>
         </div>
 
